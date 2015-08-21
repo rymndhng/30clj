@@ -1,0 +1,10 @@
+* Day 1 - Boot-CLJ
+[[http://boot-clj.com][boot.clj]] is an alternative to the incumbent build system Leiningen. In contrast
+to leiningen's purely declarative way, boot feels much more visceral. It
+understands that tasks are really dataflows ... and that they should be
+observable, and malleable in a REPL, very much the in the mindset of Clojure.
+* Thoughts on Design
+Composing tasks as middleware (like Ring). This thinking reminds me of working
+with Gradle. Boot's /fileset/ is analgous to Gradle's /sourceSet/. And in
+Gradle, you can programmatically change the configuration of a task using Groovy
+code, in the same way Boot middleware can.
