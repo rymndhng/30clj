@@ -1,0 +1,27 @@
+* Reactive Counter in CLJS
+This is a shared counter in Clojure/ClojureScript. It uses an atom to track
+shared state, and the changes are pushed using websockets.
+
+* Thoughts
+=boot-cljs= requires a bit better documentation. I banged my head at setting
+clojurescript's =:output-dir= to no avail. I think the system they have setup
+with =name.cljs.den= is clever, except it needs to be better documented how it's
+supposed to work.
+
+Spent way too much time trying to make the build tool output to the right
+directory using /boot-cljs/.
+
+* Questions
+** BOOT: What is the difference between assets and resources?
+I ask this because I mangled up building ClojureScript by adding /target/ to the
+resources. In the [[https://github.com/boot-clj/boot/wiki/Filesets][Filesets]] documentation, I wonder if there's a proper
+distinction betwe
+
+
+
+
+* Libraries Used
+aleph
+compojure
+hiccup
+boot-cljs
