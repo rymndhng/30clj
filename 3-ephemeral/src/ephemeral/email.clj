@@ -30,9 +30,23 @@
   "Sends all emails from a list of ephemerals. Once successfully sent,
   its entry will be updated in the database. If any messages fail to
   send, will throw an exception.  "
-  [host db-spec mail-auth ephemerals]
-  (doseq [ephemeral ephemerals]
-    (let [{:keys [code] :as response} (perform-send ephemeral host mail-auth)]
-      (when-not (= 0 code)
-        (throw (Exception. (str "Sending mail failed. " response))))
-      (mark-ephemeral-read ephemeral db-spec))))
+  [[ephemeral & rest] host db-spec mail-auth stop?]
+  (let [{:keys [code] :as response} (perform-send ephemeral host mail-auth)]
+    (if (= 0 code)
+      (mark-ephemeral-read)
+      (str "Sending mail failed: " response))
+
+    (when-not @stop?
+      (recur rest host db-spec mail-auth stop?))))
+
+
+(defrecord SendEmailsComponent [host db-url mail-auth]
+  component/Lifecycle
+  (start [this]
+
+    (println ";; Starting email scheduler")
+    (assoc this :)
+
+    )
+
+  )

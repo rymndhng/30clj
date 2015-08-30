@@ -41,16 +41,7 @@
                                      :message   "Hi!"
                                      :send_date "2015-07-04"}))))))
 
-
-(def postgres
-  {:classname "org.postgresql.Driver"
-   :subprotocol "postgresql"
-   :subname "//localhost:5432/ephemeral_test"})
-
-(def sqlite
-  {:subprotocol "sqlite"
-   :classname   "org.sqlite.JDBC"
-   :subname     "database.sqlite"})
+(def test-db "jdbc:postgresql://localhost:5432/ephemeral_test")
 
 (deftest crud-integration
   (let [db-spec postgres

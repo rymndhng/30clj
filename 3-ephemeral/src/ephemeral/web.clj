@@ -160,17 +160,11 @@
                           :headers {"Content-Type" "application/x-www-form-urlencoded"}
                           :body "email=chanbessie@gmail.com"}))
 
-(defn start
-  [port db-spec]
-  (let [handler (-> db-spec
-                  web-handler
-                  keyword-params/wrap-keyword-params
-                  params/wrap-params
-                  flash/wrap-flash
-                  session/wrap-session
-                  stacktrace/wrap-stacktrace)
-        server-var (find-var 'ephemeral.web/server)]
-    (when (bound? server-var)
-      (.close (var-get server-var)))
-    (println "Serving on port " port)
-    (def server (http/start-server handler {:port port}))))
+(defn app
+  [db-spec]
+  (-> (web-handler db-spec)
+    keyword-params/wrap-keyword-params
+    params/wrap-params
+    flash/wrap-flash
+    session/wrap-session
+    stacktrace/wrap-stacktrace))
