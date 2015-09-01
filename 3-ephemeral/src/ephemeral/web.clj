@@ -10,6 +10,7 @@
             [ring.middleware.params :as params]
             [ring.middleware.flash :as flash]
             [ring.middleware.keyword-params :as keyword-params]
+            [ring.middleware.content-type :as content-type]
             [ring.util.response :as ring]))
 
 (defn to-form-date
@@ -35,6 +36,7 @@
   (h/html
     [:html
      [:head
+      [:base "~/"]
       [:meta {:name "viewport" :content "width=device-width, initial-scale=1.0"}]
       [:link {:rel "stylesheet"
               :href "/public/paper.bootstrap.min.css"}]
@@ -167,4 +169,5 @@
     params/wrap-params
     flash/wrap-flash
     session/wrap-session
+    content-type/wrap-content-type
     stacktrace/wrap-stacktrace))

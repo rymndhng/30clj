@@ -36,27 +36,43 @@
     (let [{:keys [code] :as response} (perform-send ephemeral host mail-auth)]
       (if (= 0 code)
         (mark-ephemeral-read ephemeral db-spec)
-        (str "Sending mail failed: " response))
+        ;; TODO: make printing work
+        (println "Sending mail failed: " response))
       (recur rest host db-spec mail-auth))))
-
 
 (defrecord SendEmailsComponent [host db-url mail-auth]
   component/Lifecycle
   (start [component]
     (println ";; Starting emails worker")
-    (if (:worker component)
+    (if (:future component)
       component
-      (assoc component :email-worker (future (-> (db/find-unsent db-url 10)
-                                         (send-emails host db-url mail-auth))))))
+      (let [stop (promise)
+            future (future (-> (db/unread-mails db-url 10 5000 stop)
+                             (send-emails host db-url mail-auth)))]
+        (merge component {:future future
+                          :stop stop}))))
 
   (stop [component]
     (println ";; Stopping email worker")
-    (if-not (:email-worker component)
+    (if-not (:future component)
       component
       (do
-        (future-cancel (:worker component))
-        @(:worker component) ;; should wait til thy end
-        (assoc component :email-worker nil)))))
+        (when (deliver (:stop component) :stopped)
+          (try
+            @(:future component)
+            (catch Exception e (println e))))
+        (merge component {:future nil
+                          :stop nil})))))
 
-(defn new-send-email [{:keys [host db-url mail-auth]}]
+(defn get-config
+  "Gets the auth mail configuration"
+  [type host user pass]
+  (condp = type
+    "smtp" {:host host
+            :user user
+            :pass pass
+            :ssl :yes}
+    {}))
+
+(defn new-send-email [host db-url mail-auth]
   (map->SendEmailsComponent {:host host :db-url db-url :mail-auth mail-auth}))

@@ -27,13 +27,14 @@
 
 (require
   '[reloaded.repl :as repl :refer [start stop go reset]]
-  '[ephemeral.system :refer [dev-system]]
+  '[ephemeral.system :refer [dev-system prod-system]]
   '[environ.boot :refer [environ]]
   '[environ.core :refer [env]]
   '[system.boot :refer [system run]])
 
 (def dev-env
-  (environ :env {:http-port "3000"
+  (environ :env {:http-host "localhost:3000"
+                 :http-port "3000"
                  :db-url "jdbc:postgresql://localhost:5432/ephemerals_dev"}))
 
 (deftask dev
@@ -49,8 +50,14 @@
   []
   "Runs a dev system from the command line"
   (comp
-    (dev-env)
+    dev-env
     (run :main-namespace "ephemeral.main" :arguments [#'dev-system])
+    (wait)))
+
+(deftask prod-run
+  []
+  (comp
+    (run :main-namespace "ephemeral.main" :arguments [#'prod-system])
     (wait)))
 
 (deftask build

@@ -82,12 +82,16 @@
 
 (defn unread-mails
   "Returns a lazy sequence of unsent emails. Employs a wait-time
-  between chunks to throttle reads to the databse when empty. "
-  [db-spec batch-size wait-time]
+  between chunks to throttle reads to the database.
+
+  db-spec     clojure.jdbc connection
+  batch-size  number of elements (max) to fetch from SQL Query
+  wait-time   number of milliseconds to wait between successive queries
+  stop?       promise/future whose resolution stops this infinite stream
+ "
+  [db-spec batch-size wait-time ^clojure.lang.IPending stop?]
   (lazy-cat
     (find-unsent db-spec batch-size)
-    (try
+    (when-not (realized? stop?)
       (Thread/sleep wait-time)
-      (unread-mails db-spec batch-size wait-time)
-      (catch InterruptedException ex
-        nil))))
+      (unread-mails db-spec batch-size wait-time stop?))))
