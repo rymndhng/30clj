@@ -34,7 +34,7 @@
 
 (def dev-env
   (environ :env {:http-port "3000"
-                 :db-url "jdbc:postgresql//localhost:5432/ephemerals_dev"}))
+                 :db-url "jdbc:postgresql://localhost:5432/ephemerals_dev"}))
 
 (deftask dev
   "Runs a restartable system in the REPL"
@@ -63,8 +63,8 @@
     (uber)
     (jar :main 'ephemeral.main)))
 
-;; (deftask migrate
-;;   "Performs a database migration."
-;;   []
-;;   (ephemeral.db/ensure-table! (env :db-spec))
-;;   identity)
+(deftask migrate
+  "Performs a database migration."
+  []
+  (ephemeral.db/ensure-table! (env :db-url))
+  identity)

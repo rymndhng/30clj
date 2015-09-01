@@ -86,5 +86,8 @@
   [db-spec batch-size wait-time]
   (lazy-cat
     (find-unsent db-spec batch-size)
-    (Thread/sleep wait-time)
-    (unread-mails db-spec batch-size wait-time)))
+    (try
+      (Thread/sleep wait-time)
+      (unread-mails db-spec batch-size wait-time)
+      (catch InterruptedException ex
+        nil))))
