@@ -48,7 +48,7 @@
          [:div.col-xs-12.col-sm-8.col-md-6
           [:h1 "Ephemeral Messages"]
           content
-          [:a {:href "/"} "Send your own Ephemeral."]
+          [:a {:href "."} "Send your own Ephemeral."]
           [:footer
            "Made by " [:a {:href "www.twitter.com/rymndhng"} "@rymndhng"]]]]]]]]))
 
