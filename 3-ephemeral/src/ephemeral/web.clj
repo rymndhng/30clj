@@ -11,15 +11,16 @@
             [ring.middleware.flash :as flash]
             [ring.middleware.keyword-params :as keyword-params]
             [ring.middleware.content-type :as content-type]
-            [ring.util.response :as ring]))
+            [ring.middleware.proxy-headers :as proxy-headers]
+            [ring.util.response :as ring]
+            [taoensso.timbre :as t]))
 
 (defn to-form-date
   "How to serialize into a date input."
   [^java.time.Instant date]
   (-> (java.time.format.DateTimeFormatter/ISO_LOCAL_DATE)
     (.withZone (java.time.ZoneId/systemDefault))
-    (.format date)
-    ))
+    (.format date)))
 
 (defn ^java.time.Instant from-form-date
   "If you give me a long one, I will shorten it"
@@ -118,14 +119,17 @@
   [db-spec]
   (c/routes
     ;; TODO: would prefer form params but they aren't transformed into keyword params
-    (POST "/" {params :form-params}
+    (POST "/" {params      :form-params
+               remote-addr :remote-addr
+               :as req}
+      (t/info req)
       (try
         (-> params
           (clojure.walk/keywordize-keys)
           (update :send_date from-form-date)
           (assoc  :id (java.util.UUID/randomUUID))
           (#(db/create! db-spec %)))
-        (assoc (ring/redirect "/")
+        (assoc (ring/redirect remote-addr)
           :flash "created")
         (catch Exception e
           (println e)
@@ -170,4 +174,5 @@
     flash/wrap-flash
     session/wrap-session
     content-type/wrap-content-type
+    proxy-headers/wrap-forwarded-remote-addr
     stacktrace/wrap-stacktrace))

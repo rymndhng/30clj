@@ -1,7 +1,8 @@
 (ns ephemeral.email
   (:require [postal.core :as postal]
             [ephemeral.db :as db]
-            [com.stuartsierra.component :as component]))
+            [com.stuartsierra.component :as component]
+            [taoensso.timbre :as t]))
 
 (defn template
   [host ephemeral-id]
@@ -37,13 +38,13 @@
       (if (= 0 code)
         (mark-ephemeral-read ephemeral db-spec)
         ;; TODO: make printing work
-        (println "Sending mail failed: " response))
+        (t/error "Sending mail failed: " response))
       (recur rest host db-spec mail-auth))))
 
 (defrecord SendEmailsComponent [host db-url mail-auth]
   component/Lifecycle
   (start [component]
-    (println ";; Starting emails worker")
+    (t/info ";; Starting emails worker")
     (if (:future component)
       component
       (let [stop (promise)
@@ -53,7 +54,7 @@
                           :stop stop}))))
 
   (stop [component]
-    (println ";; Stopping email worker")
+    (t/info ";; Stopping email worker")
     (if-not (:future component)
       component
       (do
