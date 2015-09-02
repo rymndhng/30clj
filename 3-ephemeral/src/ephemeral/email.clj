@@ -7,11 +7,11 @@
 (defn template
   [host ephemeral-id]
   (str
-    "You received an ephemeral message. Please read it at " host "/" ephemeral-id))
+    "You received an ephemeral message. Please read it at " host ephemeral-id))
 
 (defn create-email
   [{:keys [id to_email]} ^String host]
-  {:from "ephemerals@gmail.com"
+  {:from "ephemerals@rymndhng.com"
    :to [to_email]
    :subject "You received an Ephemeral Message!"
    :body (template host id)})

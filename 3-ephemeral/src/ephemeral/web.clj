@@ -12,7 +12,7 @@
             [ring.middleware.keyword-params :as keyword-params]
             [ring.middleware.content-type :as content-type]
             [ring.middleware.proxy-headers :as proxy-headers]
-            [ring.util.response :as ring]
+            [ring.util.response :as response]
             [taoensso.timbre :as t]))
 
 (defn to-form-date
@@ -120,14 +120,13 @@
   (c/routes
     ;; TODO: would prefer form params but they aren't transformed into keyword params
     (POST "/" {params :form-params}
-      (t/info req)
       (try
         (-> params
           (clojure.walk/keywordize-keys)
           (update :send_date from-form-date)
           (assoc  :id (java.util.UUID/randomUUID))
           (#(db/create! db-spec %)))
-        (assoc (ring/redirect server-name)
+        (assoc (response/redirect-after-post server-name)
           :flash "created")
         (catch Exception e
           (println e)
@@ -142,14 +141,16 @@
           (->> row
             db/mark-read
             (db/update! db-spec)))
-        {:status 200
-         :headers {"Content-Type" "image/gif"}
-         :body "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAI="}))
+        (-> "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAI="
+          response/response
+          (response/content-type "image/gif"))))
 
     (GET "/:id" [id]
       (let [ephemeral (db/find-one db-spec id)]
         (if-not (:read ephemeral true)
           (message-page ephemeral)
+          (-> (response/not-found (not-found))
+            (response/content-type "text/html"))
           {:status 404
            :body not-found})))
 
