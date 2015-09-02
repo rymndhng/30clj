@@ -17,7 +17,7 @@
    :ssl s/Keyword})
 
 (s/defschema Configuration
-  {:http-host s/Str
+  {:server-name s/Str
    :http-port s/Int
    :db-url    s/Str
    :mail-auth (s/either (s/eq {}) STMPConfig)
@@ -28,15 +28,15 @@
   [:web (new-web-server (Integer. (env :http-port))
           (app (env :db-url)))
    :worker (new-send-email
-             (env :http-host)
+             (env :server-name)
              (env :db-url)
              (env :mail-auth))])
 
 (defsystem prod-system
   [:web (new-web-server (Integer. (env :http-port))
-          (app (env :db-url)))
+          (app (env :server-name) (env :db-url)))
    :worker (new-send-email
-             (env :http-host)
+             (env :server-name)
              (env :db-url)
              (env :mail-auth))
    :repl-server (new-repl-server (Integer. (env :repl-port)))])

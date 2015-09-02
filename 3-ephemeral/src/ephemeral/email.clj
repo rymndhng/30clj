@@ -41,7 +41,7 @@
         (t/error "Sending mail failed: " response))
       (recur rest host db-spec mail-auth))))
 
-(defrecord SendEmailsComponent [host db-url mail-auth]
+(defrecord SendEmailsComponent [server-name db-url mail-auth]
   component/Lifecycle
   (start [component]
     (t/info ";; Starting emails worker")
@@ -49,7 +49,7 @@
       component
       (let [stop (promise)
             future (future (-> (db/unread-mails db-url 10 5000 stop)
-                             (send-emails host db-url mail-auth)))]
+                             (send-emails server-name db-url mail-auth)))]
         (merge component {:future future
                           :stop stop}))))
 
@@ -75,5 +75,5 @@
             :ssl :yes}
     {}))
 
-(defn new-send-email [host db-url mail-auth]
-  (map->SendEmailsComponent {:host host :db-url db-url :mail-auth mail-auth}))
+(defn new-send-email [server-name db-url mail-auth]
+  (map->SendEmailsComponent {:server-name server-name :db-url db-url :mail-auth mail-auth}))

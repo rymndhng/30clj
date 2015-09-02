@@ -116,12 +116,10 @@
       [:h4 [:strong.span-error "404!"]" Could not find this page."])))
 
 (defn web-handler
-  [db-spec]
+  [server-name db-spec]
   (c/routes
     ;; TODO: would prefer form params but they aren't transformed into keyword params
-    (POST "/" {params      :form-params
-               remote-addr :remote-addr
-               :as req}
+    (POST "/" {params :form-params}
       (t/info req)
       (try
         (-> params
@@ -129,7 +127,7 @@
           (update :send_date from-form-date)
           (assoc  :id (java.util.UUID/randomUUID))
           (#(db/create! db-spec %)))
-        (assoc (ring/redirect remote-addr)
+        (assoc (ring/redirect server-name)
           :flash "created")
         (catch Exception e
           (println e)
@@ -150,7 +148,7 @@
 
     (GET "/:id" [id]
       (let [ephemeral (db/find-one db-spec id)]
-        (if-not (:read ephemeral false)
+        (if-not (:read ephemeral true)
           (message-page ephemeral)
           {:status 404
            :body not-found})))
@@ -167,8 +165,8 @@
                           :body "email=chanbessie@gmail.com"}))
 
 (defn app
-  [db-spec]
-  (-> (web-handler db-spec)
+  [server-name db-spec]
+  (-> (web-handler server-name db-spec)
     keyword-params/wrap-keyword-params
     params/wrap-params
     flash/wrap-flash
