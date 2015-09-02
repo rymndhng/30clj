@@ -149,10 +149,10 @@
       (let [ephemeral (db/find-one db-spec id)]
         (if-not (:read ephemeral true)
           (message-page ephemeral)
-          (-> (response/not-found (not-found))
-            (response/content-type "text/html"))
-          {:status 404
-           :body not-found})))
+          (-> not-found
+            response/not-found
+            (response/content-type "text/html")))))
+
 
     (GET "/" request
       (homepage (:flash request)))
