@@ -1,0 +1,12 @@
+* 30 Clojures
+See how many little Clojure projects I can get to.
+** 1 - Boot
+Playing around with clj-boot as a build too
+** 2 - Watches
+Exposing watches over Websockets & CLJS so that users can "share" clicking on a
+button
+** 3 - Ephemerals
+Small webapp that scheduled ephemeral messages. The messages are short lived and
+can only be read once.
+
+Check it out [[http://www.rymndhng.com/ephemerals/][here]]
