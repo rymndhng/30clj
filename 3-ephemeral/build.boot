@@ -35,15 +35,15 @@
 
 (def dev-config
   "We print a string to re-use the generic reader. Sigh."
-  {:http-host "localhost:3000"
+  {:server-name "localhost:3000"
    :http-port 3000
    :db-url "jdbc:postgresql://localhost:5432/ephemerals_dev"
-   :mail-auth {:foo :bar}})
+   :mail-auth {}})
 
 (deftask dev-env
   "Merges a map environment -- because I like to do that in a REPL."
   []
-  (with-redefs [environ/env (merge environ/env (s/validate dev-config))]
+  (with-redefs [environ/env (merge environ/env (s/validate Configuration dev-config))]
     identity))
 
 (deftask dev
