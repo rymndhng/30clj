@@ -1,19 +1,13 @@
-#+TITLE Ephemeral
-
-Ephemeral is a small web utility where you send ephemeral messages to other
-people via E-mail. Once the email has been read, it ceases to exist.
+* Ephemerals
+Ephemeral is a small web utility where you send ephemeral messages to each other
+people. Once the email has been opened, it ceases to exist.
 
 This is a small scoped Clojure Project web application project which includes:
 
 - interacting with Postgres
 - templating HTML (using Hiccup)
-- lazy streams (by polling a db)
+- lazy streams
+- building with clj-boot
+- using system & component
 
-It's mostly self-contained other than the Database.
-
-
-* Improvements
-** TODO Find a clojure library that makes it easy to manage background workers
-Managing pools of background workers. It'd be nice to run them on the same JVM
-rather than as separate processes.
-** TODO Manage environment with environ
+You can check it out at [[http://www.rymndhng.com/ephemerals/][here]].
