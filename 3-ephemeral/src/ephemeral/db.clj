@@ -31,13 +31,18 @@
     (update :send_date #(java.sql.Timestamp. (.toEpochMilli %)))
     (update :received_time #(when % (java.sql.Timestamp. (.toEpochMilli %))))))
 
+(def NonZeroString
+  (s/both
+    s/Str
+    (s/pred (fn [x] (pos? (count x))) :length-greater-than-zero)))
+
 ;; TODO: explore an ORM that can maybe generate the CRUD for us :)
 (def Ephemeral
   "A schema for a nested data type"
   {:id s/Uuid
-   :from_user s/Str
-   :to_email s/Str
-   :message s/Str
+   :from_user NonZeroString
+   :to_email NonZeroString
+   :message NonZeroString
    :send_date java.time.Instant
    (s/optional-key :sent) s/Bool
    (s/optional-key :read) s/Bool

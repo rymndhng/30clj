@@ -10,7 +10,7 @@
 
                   [org.clojure/java.jdbc "0.4.1"]
                   [org.postgresql/postgresql "9.4-1201-jdbc41"]
-                  [prismatic/schema "0.4.4"]
+                  [prismatic/schema "1.0.1"]
 
                   ;; email and core.async for background processing
                   [com.draines/postal "1.11.3"]

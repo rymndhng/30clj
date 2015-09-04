@@ -26,7 +26,7 @@
 
 (defsystem dev-system
   [:web (new-web-server (Integer. (env :http-port))
-          (app (env :db-url)))
+          (app (env :server-name) (env :db-url)))
    :worker (new-send-email
              (env :server-name)
              (env :db-url)

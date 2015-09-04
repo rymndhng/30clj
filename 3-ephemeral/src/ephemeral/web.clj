@@ -52,8 +52,25 @@
           [:footer
            "Made by " [:a {:href "www.twitter.com/rymndhng"} "@rymndhng"]]]]]]]]))
 
+(defn error-to-text
+  [err]
+  (condp =
+      :length-greather-than-zero "This field should not be empty."))
+
+(defn form-group
+  "Creates a form group which wraps elements with Bootstrap helpers
+  when the error key is present."
+  ([error & elements]
+   (if error
+     `[:div.form-group.has-error
+       ~@elements
+       [:span.help-block (error-to-text error)]]
+
+     `[:div.form-group
+       ~@elements])))
+
 (defn homepage
-  [created?]
+  [{:keys [created? ephemeral]}]
   (base-template
     (h/html
       [:h5 "Send an Ephemeral to a loved one!"]
@@ -61,27 +78,34 @@
         [:div.alert.alert-success {:role "alert"}
          [:strong "Success!"] "  Send one more?"])
       [:form {:method "POST"}
-       [:div.form-group
-        [:input#email-input.form-control {:type "email"
-                                          :placeholder "E-mail to..."
-                                          :name "to_email"}]]
-       [:div.form-group
-        [:textarea.form-control {:rows 5
-                                 :placeholder "Enter a Message"
-                                 :name "message"}]]
-       [:div.form-group
-        [:label {:for "from-input"} "From"]
-        [:input.form-control {:type "text"
-                              :placeholder "Enter your name..."
-                              :name "from_user"}]]
+       (form-group nil
+         [:input#email-input.form-control {:type "email"
+                                           :placeholder "E-mail to..."
+                                           :name "to_email"
+                                           :value (:email ephemeral "")}])
+       (form-group nil
+         [:textarea.form-control {:rows 5
+                                  :placeholder "Enter a Message"
+                                  :name "message"
+                                  :value (:message ephemeral "")}])
+
+       (form-group nil
+         [:label {:for "from-input"} "From"]
+         [:input.form-control {:type "text"
+                               :placeholder "Enter your name..."
+                               :name "from_user"
+                               :value (:from_user ephemeral "")}])
        [:div.row
         [:div.col-xs-5
-         [:div.form-group
-          [:label "Send Date"]
-          [:input#send-date.form-control {:type "date"
-                                          :placeholder "Send Date"
-                                          :name "send_date"
-                                          :value (to-form-date (java.time.Instant/now))}]]]
+         (form-group nil
+           [:label "Send Date"]
+           [:input#send-date.form-control {:type "date"
+                                           :placeholder "Send Date"
+                                           :name "send_date"
+                                           :value (-> (:send_date
+                                                       ephemeral
+                                                       (java.time.Instant/now))
+                                                    to-form-date)}])]
         [:div.col-xs-7
          [:div.form-group
           [:label "Add Time"]
@@ -118,7 +142,8 @@
 (defn web-handler
   [server-name db-spec]
   (c/routes
-    ;; TODO: would prefer form params but they aren't transformed into keyword params
+    ;; TODO: would prefer form params but they aren't transformed intokeyword
+    ;; params
     (POST "/" {params :form-params}
       (try
         (-> params
@@ -162,7 +187,8 @@
 (comment
   ((web-handler db-spec) {:request-method :get
                           :uri "/123"
-                          :headers {"Content-Type" "application/x-www-form-urlencoded"}
+                          :headers {"Content-Type"
+                                    "application/x-www-form-urlencoded"}
                           :body "email=chanbessie@gmail.com"}))
 
 (defn app
