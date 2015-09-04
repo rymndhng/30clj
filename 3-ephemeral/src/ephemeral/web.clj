@@ -13,19 +13,21 @@
             [ring.middleware.content-type :as content-type]
             [ring.middleware.proxy-headers :as proxy-headers]
             [ring.util.response :as response]
-            [taoensso.timbre :as t]))
+            [taoensso.timbre :as t]
+            [schema.core :as schema]))
 
 (defn to-form-date
   "How to serialize into a date input."
   [^java.time.Instant date]
-  (-> (java.time.format.DateTimeFormatter/ISO_LOCAL_DATE)
-    (.withZone (java.time.ZoneId/systemDefault))
-    (.format date)))
+  (when date
+    (-> (java.time.format.DateTimeFormatter/ISO_LOCAL_DATE)
+      (.withZone (java.time.ZoneId/systemDefault))
+      (.format date))))
 
 (defn ^java.time.Instant from-form-date
   "If you give me a long one, I will shorten it"
   [text]
-  (if-not text
+  (if (empty? text)
     nil
     (-> (java.time.LocalDate/parse (subs text 0 10))
       (.atTime 0 0)  ;; midnight it
@@ -52,8 +54,41 @@
           [:footer
            "Made by " [:a {:href "www.twitter.com/rymndhng"} "@rymndhng"]]]]]]]]))
 
+(defn error-to-text
+  "Returns human readable text for an error string. If none present,
+  simply returns the key."
+  [err]
+  (condp = err
+      :invalid-email "Invalid Email!"
+      :length-greater-than-zero "This field should not be empty."
+      :valid-instant "Invalid Date!"
+      err))
+
+(defn form-group
+  "Creates a Boostrap form group for conditionally showing error text.
+
+  schema-error  Primsatic/Schema error binded to the form element.
+  elements      Hiccup form element(s) to wrap.
+  "
+  ([error & elements]
+   ;; TODO: rework this more elegantly. Need to read the schema API more deeply.
+   (if-let [error-key (condp = (type error)
+                        schema.utils.ValidationError
+                        (some-> error .schema :pred-name)
+
+                        schema.utils.NamedError
+                        (some-> error .name)
+
+                        nil)]
+     `[:div.form-group.has-error
+       ~@elements
+       [:span.help-block ~(error-to-text error-key)]]
+
+     `[:div.form-group
+       ~@elements])))
+
 (defn homepage
-  [created?]
+  [{:keys [created? errors ephemeral]}]
   (base-template
     (h/html
       [:h5 "Send an Ephemeral to a loved one!"]
@@ -61,27 +96,34 @@
         [:div.alert.alert-success {:role "alert"}
          [:strong "Success!"] "  Send one more?"])
       [:form {:method "POST"}
-       [:div.form-group
-        [:input#email-input.form-control {:type "email"
-                                          :placeholder "E-mail to..."
-                                          :name "to_email"}]]
-       [:div.form-group
-        [:textarea.form-control {:rows 5
-                                 :placeholder "Enter a Message"
-                                 :name "message"}]]
-       [:div.form-group
-        [:label {:for "from-input"} "From"]
-        [:input.form-control {:type "text"
-                              :placeholder "Enter your name..."
-                              :name "from_user"}]]
+       (form-group (:to_email errors)
+         [:input#email-input.form-control {:type "email"
+                                           :placeholder "E-mail to..."
+                                           :name "to_email"
+                                           :value (:to_email ephemeral "")}])
+       (form-group (:message errors)
+         [:textarea.form-control {:rows 5
+                                  :placeholder "Enter a Message"
+                                  :name "message"
+                                  :value (:message ephemeral "")}])
+
+       (form-group (:from_user errors)
+         [:label {:for "from-input"} "From"]
+         [:input.form-control {:type "text"
+                               :placeholder "Enter your name..."
+                               :name "from_user"
+                               :value (:from_user ephemeral "")}])
        [:div.row
         [:div.col-xs-5
-         [:div.form-group
-          [:label "Send Date"]
-          [:input#send-date.form-control {:type "date"
-                                          :placeholder "Send Date"
-                                          :name "send_date"
-                                          :value (to-form-date (java.time.Instant/now))}]]]
+         (form-group (:send_date errors)
+           [:label "Send Date"]
+           [:input#send-date.form-control {:type "date"
+                                           :placeholder "Send Date"
+                                           :name "send_date"
+                                           :value (-> (:send_date
+                                                       ephemeral
+                                                       (java.time.Instant/now))
+                                                    to-form-date)}])]
         [:div.col-xs-7
          [:div.form-group
           [:label "Add Time"]
@@ -113,25 +155,37 @@
 (def not-found
   (base-template
     (h/html
-      [:h4 [:strong.span-error "404!"]" Could not find this page."])))
+      [:h4 [:strong.span-error "404!"] " Could not find this page."])))
+
+(def unexpected-error
+  (base-template
+    (h/html
+      [:h4 [:string.span-error "Error!"]
+       "Not sure what happened. Maybe file an "
+       [:a {:href "https://github.com/rymndhng/30clj/issues"} "issue" ]
+       '.])))
 
 (defn web-handler
   [server-name db-spec]
   (c/routes
-    ;; TODO: would prefer form params but they aren't transformed into keyword params
     (POST "/" {params :form-params}
-      (try
-        (-> params
-          (clojure.walk/keywordize-keys)
-          (update :send_date from-form-date)
-          (assoc  :id (java.util.UUID/randomUUID))
-          (#(db/create! db-spec %)))
-        (assoc (response/redirect-after-post server-name)
-          :flash "created")
-        (catch Exception e
-          (println e)
-          {:status 400
-           :body (str "Malformed Request" e)})))
+      (let [model (-> params
+                    (clojure.walk/keywordize-keys)
+                    (update :send_date from-form-date)
+                    (assoc  :id (java.util.UUID/randomUUID)))]
+        (if-let [errors (schema/check db/Ephemeral model)]
+          (-> {:status 400
+               :body (homepage {:errors errors
+                                :ephemeral model})}
+            (response/content-type "text/html"))
+          (try
+            (db/create! db-spec model)
+            (t/spy (assoc (response/redirect server-name :see-other)
+                     :flash "created"))
+            (catch Exception e
+              (println e)
+              (-> {:status 400
+                   :body unexpected-error}))))))
 
     ;; Endpoint which provides tracking via pixel.
     (GET "/:id.gif" [id]
@@ -149,20 +203,19 @@
       (let [ephemeral (db/find-one db-spec id)]
         (if-not (:read ephemeral true)
           (message-page ephemeral)
-          (-> not-found
-            response/not-found
+          (-> (response/not-found not-found)
             (response/content-type "text/html")))))
 
-
     (GET "/" request
-      (homepage (:flash request)))
+      (homepage {:created? (:flash request)}))
     (route/resources "/public")
     (route/not-found "No such page.")))
 
 (comment
   ((web-handler db-spec) {:request-method :get
                           :uri "/123"
-                          :headers {"Content-Type" "application/x-www-form-urlencoded"}
+                          :headers {"Content-Type"
+                                    "application/x-www-form-urlencoded"}
                           :body "email=chanbessie@gmail.com"}))
 
 (defn app

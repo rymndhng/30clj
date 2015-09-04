@@ -10,7 +10,7 @@
 
                   [org.clojure/java.jdbc "0.4.1"]
                   [org.postgresql/postgresql "9.4-1201-jdbc41"]
-                  [prismatic/schema "0.4.4"]
+                  [prismatic/schema "1.0.1"]
 
                   ;; email and core.async for background processing
                   [com.draines/postal "1.11.3"]
@@ -43,8 +43,10 @@
 (deftask dev-env
   "Merges a map environment -- because I like to do that in a REPL."
   []
-  (with-redefs [environ/env (merge environ/env (s/validate Configuration dev-config))]
-    identity))
+  (fn [next-handler]
+    (fn [fileset]
+      (with-redefs [environ/env (merge environ/env (s/validate Configuration dev-config))]
+        (next-handler fileset)))))
 
 (deftask dev
   "Runs a restartable system in the REPL"
