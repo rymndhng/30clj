@@ -1,0 +1,2 @@
+{:require  [cheerleader.app]
+ :init-fns [cheerleader.app/init]}

@@ -1,5 +1,5 @@
 * 30 Clojures
-See how many little Clojure projects I can get to.
+Little Repo for little Clojure Projects & Experiments.
 ** 1 - Boot
 Playing around with clj-boot as a build too
 ** 2 - Watches

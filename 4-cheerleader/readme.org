@@ -1,0 +1,7 @@
+* Cheerleader
+A simple webapp that does only two things:
+
+- tells you when it's time for gains
+- tells you when it's time to take a break
+
+You can program the time & the break.

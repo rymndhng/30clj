@@ -1,0 +1,68 @@
+h1 {
+    font-family: "SF UI Display";
+}
+
+.example-clock {
+    font-family: "SF UI Display";
+    font-weight: 200;
+    font-variant: small-caps;
+    font-size: 8em;
+}
+
+div {
+    text-align: center;
+}
+
+div.color-input {
+    font-family: "SF UI Text";
+    font-size: 2em;
+}
+
+input {
+    border: none;
+    background: transparent;
+    background: #DDD;
+    border-radius: 5px;
+    font-family: "SF UI Text";
+    font-size: 1em;
+}
+
+@keyframes pulse
+{
+  0%  {background-color: #FFFFFF;}
+ 25%  {background-color: #FFF5A5;}
+ 50%  {background-color: #FFD4DA;}
+ 75%  {background-color: #99D2E4;}
+ 100% {background-color: #FFFFFF;}
+}
+
+.pulser {
+    background-color: #FFFFFF;
+    animation: pulse 5s;
+}
+
+.scanline {
+    position: relative;
+    height: 5em;
+}
+
+@keyframes slide
+{
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+#container {
+    margin-bottom: 50px;
+}
+
+#footer {
+    height: 50px;
+    position: fixed;
+    bottom: 0;
+    width: 100%
+}
