@@ -1,12 +1,18 @@
 (set-env!
  :source-paths    #{"src/cljs"}
  :resource-paths  #{"resources"}
- :dependencies '[[adzerk/boot-cljs          "0.0-3308-0" :scope "test"]
-                 [adzerk/boot-cljs-repl     "0.1.9"      :scope "test"]
-                 [adzerk/boot-reload        "0.3.1"      :scope "test"]
-                 [pandeiro/boot-http        "0.6.3"      :scope "test"]
-                 [org.clojure/clojurescript "1.7.58"]
-                 [reagent "0.5.0"]])
+ :dependencies '[[adzerk/boot-cljs          "1.7.170-3"      :scope "test"]
+                 [adzerk/boot-cljs-repl     "0.3.0"          :scope "test"]
+                 [adzerk/boot-reload        "0.4.2"          :scope "test"]
+                 [pandeiro/boot-http        "0.7.1-SNAPSHOT" :scope "test"]
+
+                 ;; needed for dev
+                 [com.cemerick/piggieback "0.2.1" :scope "test"]
+                 [weasel "0.7.0" :scope "test"]
+                 [org.clojure/tools.nrepl "0.2.12" :scope "test"]
+
+                 [org.clojure/clojurescript "1.7.170"]
+                 [reagent "0.5.1"]])
 
 (require
  '[adzerk.boot-cljs      :refer [cljs]]
@@ -33,6 +39,7 @@
 (deftask development []
   (task-options! cljs {:optimizations :none
                        :unified-mode true
+                       :compiler-options {:asset-path "js/app.out"}
                        :source-map true}
                  reload {:on-jsload 'cheerleader.app/init})
   identity)
