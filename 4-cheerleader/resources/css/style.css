@@ -1,12 +1,30 @@
-h1 {
-    font-family: "SF UI Display";
+.scroll-container {
+    width: 100%;
+    position: absolute;
+    opacity: 0.5;
+}
+
+.scanline {
+    position: relative;
+    height: 6em;
+}
+
+@keyframes slide
+{
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 .example-clock {
     font-family: "SF UI Display";
     font-weight: 200;
     font-variant: small-caps;
-    font-size: 8em;
+    font-size: 4em;
+    z-index: 5;
 }
 
 div {
@@ -41,20 +59,7 @@ input {
     animation: pulse 5s;
 }
 
-.scanline {
-    position: relative;
-    height: 5em;
-}
 
-@keyframes slide
-{
-    0% {
-        transform: translateX(0);
-    }
-    100% {
-        transform: translateX(100%);
-    }
-}
 
 #container {
     margin-bottom: 50px;

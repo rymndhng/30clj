@@ -1,171 +1,202 @@
 (ns cheerleader.app
-  (:require [reagent.core :as reagent :refer [atom]]))
+  (:require-macros [reagent.ratom :refer [reaction]])
+  (:require [reagent.core :as reagent]
+            [re-frame.core :as rf]
+            [cheerleader.fmt :as fmt]))
 
-(defonce timer       (reagent/atom (js/Date.)))
-(defonce time-color  (reagent/atom "#000"))
-(defonce start-pulse (reagent/atom false))
-(defonce in-pulse    (reagent/atom false))
+(defn readable-time [date-obj]
+  "Formats to HH:MM:SS"
+  (-> date-obj .toTimeString (clojure.string/split " ") first))
 
-;; This is finnicky because CSS animations are hard to control on reload
-(defonce timer-state (reagent/atom {:started?       nil
-                                    :start-time     nil
-                                    :interval       nil
-                                    :break          nil
-                                    :count          0}))
+(defonce time-updater (js/setInterval #(rf/dispatch [:tick-timer (js/Date.)]) 1000))
 
-(def default-voice (->> (.getVoices js/window.speechSynthesis)
-                     (filter #(= "en-GB" (.-lang %)))
-                     first))
+(def init-state {:time (js/Date.)
 
-(def speak-start-rep
-  (doto (js/SpeechSynthesisUtterance. "Go!")
-    (aset "voice" default-voice)))
+                 :timer {:started?   nil
+                         :start-time nil
+                         :interval   nil
+                         :break      nil
+                         :count      0
+                         :count-max  nil}
 
-(def speak-take-break
-  (doto (js/SpeechSynthesisUtterance. "Stap!")
-    (aset "voice" default-voice)))
+                 ;; When the form value changes, it's binded to this data structure
+                 :bind-form {:interval nil
+                             :break    nil
+                             :count    nil}
 
-(defn speak [msg]
-  (.speak js/window.speechSynthesis msg))
+                 ;; List of Schedules to Show and Run
+                 :schedules [{:name "Dog Pose"
+                              :interval 30
+                              :break    15
+                              :reps     5}]})
 
-(defonce animation-listener
-  (doall
-    (map #(.addEventListener
-            (.getElementById js/document "container")
-            (first %) (second %))
-      ;; Hacks but this essentially only happens when the progressbar ends
-      [["animationiteration" (fn []
-                               )]
-       ["animationend" (fn []
-                         (js/console.log "IT ENDED!")
-                         (swap! timer-state (fn [x]
-                                              (-> x
-                                                (update :count inc)
-                                                (assoc :start-time (js/Date.)))))
-                         (speak speak-start-rep)
+;; -- Event Handlers -----------------------------------------------------------
+(rf/register-handler
+  :initialize
+  (fn
+    [db _]
+    (js/console.log "Hello")
+    (merge db init-state)))
 
-                         ;; Need to specialize on this.
-                         (reset! start-pulse true)
-                         (reset! in-pulse false))]
-       ])))
+(rf/register-handler
+  :tick-timer
+  (fn [db [_ value]]
+    (assoc db :time value)))
 
-(defn clock []
-  (let [time-str (-> @timer .toTimeString (clojure.string/split " ") first)]
-    [:div.example-clock
-     {:style {:color @time-color}}
-     time-str]))
+(rf/register-handler
+  :trigger-start-stop
+  (fn [db [_ value]]
+    (update db :timer
+      (fn [timer]
+        (-> timer
+          (update :started? #(not %))
+          (assoc :start-time (js/Date.))
+          (assoc :interval (js/parseInt (get-in db [:bind-form :interval])))
+          (assoc :break    (js/parseInt (get-in db [:bind-form :break])))
+          )))))
 
-(defn color-input []
-  [:div.color-input
-   [:input {:type "color"
-            :value @time-color
-            :on-change #(reset! time-color (-> % .-target .-value))}]])
+(rf/register-handler
+  :update-form
+  (fn [db [_ field value]]
+    (assoc-in db [:bind-form field] value)))
 
-(defonce form-state (reagent/atom {:interval 0
-                                   :break    0}))
+;; -- Subscription Handlers ----------------------------------------------------
+(rf/register-sub
+  :time
+  (fn
+    [db _]                              ;; db is the app-db atom
+    (reaction (:time @db))))          ;; wrap the computation in a reaction
 
-(defn timer-control []
-  [:div.col-xs-12
-   [:form.form-horizontal
-    [:div.form-group
-     [:label.col-xs-3.col-xs-offset-2.control-label "Interval"]
-     [:div.col-xs-5
-      [:input.form-control.input-lg {:type "text"
-                                     :placeholder "Interval"
-                                     :on-change #(swap! form-state assoc :interval
-                                                   (-> % .-target .-value js/parseInt (* 1000)))}]]]
-    [:div.form-group
-     [:label.col-xs-3.col-xs-offset-2.control-label "Rest Interval"]
-     [:div.col-xs-5
-      [:input.form-control.input-lg {:type "text"
-                                     :placeholder "Rest Interval"
-                                     :on-change #(swap! form-state assoc :break
-                                                   (-> % .-target .-value js/parseInt (* 1000)))}]]]
-    [:div.form-group
-     [:div.col-xs-5.col-xs-offset-5
-      [:button.btn.btn-primary.btn-block.btn-lg
-       {:on-click (fn [e]
-                    (.preventDefault e)
-                    (reset! timer-state (merge @form-state
-                                          {:started? true
-                                           :start-time (js/Date.)
-                                           :count 0})))}
-       "Reset!"]]]]])
+(rf/register-sub
+  :timer-state
+  (fn
+    [db _]
+    (reaction (:timer @db))))
 
+(rf/register-sub
+  :current-timer
+  (fn
+    [db _]
+    (reaction (let [current-time (:time @db)
+                    {:keys [interval break start-time started?]} (:timer @db)]
+                (if started?
+                  (let [full-period (+ break interval)
+                        animate-seconds (-> full-period
+                                          Math/round
+                                          (str "s"))
+                        elapsed (-> (- (.getTime current-time)
+                                       (.getTime start-time))
+                                  (/ 1000)
+                                  Math/round
+                                  (mod full-period))]
+                    {:full-period full-period
+                     :animate-seconds animate-seconds
+                     :elapsed elapsed})
+                  {})))))
 
-(defn ratio-to-css-pct [ratio]
-  (-> ratio
-    (* 100)
-    str
-    (subs 0 10)
-    (str "%")))
+(rf/register-sub
+  :form-state
+  (fn [db _]
+    (reaction (:bind-form @db))))
 
-(defn show-elapsed-time []
-  (let [{:keys [interval break start-time started?]} @timer-state
-        full-period (+ break interval)
-        animate-seconds (-> (/ full-period 1000) Math/round
-                              (str "s"))
-        elapsed     (-> (- (.getTime @timer)
-                          (.getTime start-time))
-                      (mod full-period))]
-    [:div.scanline
-     [:svg {:width "100%" :height "100%"
-            :style {:shape-rendering "auto"}}
-      [:rect {:width (ratio-to-css-pct (/ interval full-period))
-              :height "100%"
-              :style {:fill "#99D2E4"}}]
-      [:rect {:x (ratio-to-css-pct (/ interval full-period))
-              :width (ratio-to-css-pct (/ break full-period))
-              :height "100%"
-              :style {:fill "#FFD4DA"}}]
-      ;; FIXME: how do I only redraw this when start-time changes?
-      ^{:key start-time}
-      [:rect {:width "100%"
-              :height "100%"
-              :style {:fill "#FFF"
-                      :opacity 0.7
-                      :animation-name "slide"
-                      :animation-duration animate-seconds
-                      :animation-timing-function "linear"}}
-       ]]]))
+;; -- view components ----------------------------------------------------------
+(defn read-input
+  "Reads input tab succinctly"
+  [element]
+  (-> element .-target .-value))
 
-(defn stats-view []
-  [:div (str "Count:" (:count @timer-state))])
+;; TODO: make a macro for form controls instead
+(defn form-group [label & body]
+  [:div.form-group {:key label}
+   [:label.control-label label]
+   [:div
+    body]])
 
-(defn simple-example []
-  (when @start-pulse
-    (reset! start-pulse false)
-    (reset! in-pulse true))
+(defn input-group
+  [form-value bind-field handler]
+  [form-group
+   (fmt/readable-key bind-field)
+   ^{:key bind-field}
+   [:input.form-control {:type "text"
+                         :on-change #(rf/dispatch [handler bind-field (read-input %)])
+                         :value (bind-field form-value)}]])
+
+(defn form-control
+  "Controls the form input."
+  []
+  (let [form-state (rf/subscribe [:form-state])
+        timer-state (rf/subscribe [:timer-state])]
+    (fn form-render []
+      (let [form-value @form-state
+            timer-value @timer-state]
+        [:form.form-inline
+         (when (not (:started? timer-value))
+           [:div
+            [input-group form-value :interval :update-form]
+            [input-group form-value :break    :update-form]])
+         (form-group ""
+           [:input.btn.btn-primary {:key :submit
+                                    :type "button"
+                                    :value "Start/Stop"
+                                    :on-click #(rf/dispatch [:trigger-start-stop])}])]))))
+
+(defn greeting [message]
+  [:h1 message])
+
+(defn slider []
+  (let [timer (rf/subscribe [:timer-state])
+        current-timer (rf/subscribe [:current-timer])]
+    (fn []
+      (let [{:keys [interval break started?]} @timer
+            {:keys [full-period animate-seconds elapsed]} @current-timer]
+        (when started?
+          (do
+            (print (str elapsed ":" full-period))
+            [:div.scanline
+             [:svg {:width "100%" :height "100%"
+                    :style {:shape-rendering "auto"}}
+              [:rect {:width (fmt/ratio-to-css-pct (/ interval full-period))
+                      :height "100%"
+                      :style {:fill "#99D2E4"}}]
+              [:rect {:x (fmt/ratio-to-css-pct (/ interval full-period))
+                      :width (fmt/ratio-to-css-pct (/ break full-period))
+                      :height "100%"
+                      :style {:fill "#FFD4DA"}}]
+              [:rect {:width (fmt/ratio-to-css-pct (/ elapsed full-period))
+                      :height "100%"
+                      :style {:fill "#FFF"
+                              :opacity 0.7}}]]]))))))
+
+(defn clock
+  []
+  (let [timer (rf/subscribe [:time])]
+    (fn clock-render
+      []
+      (let [time-str (readable-time @timer)]
+        [:div.example-clock time-str]))))
+
+(defn simple-example
+  []
   [:div
-   [:div.container-fluid (when @in-pulse {:className "pulser"})
-    [:div.row
-     [clock]
-     (when (:started? @timer-state)
-       [stats-view])]
-    [:div.row
-     [timer-control]]
-    (when (:started? @timer-state)
-      [show-elapsed-time])]])
+   [greeting "Hello world, it is now"]
+   [clock]
+   [slider]
+   [form-control]])
 
-(defn elapsed [start current period]
-  (-> (- (.getTime current) (.getTime start))
-    (mod period)))
+(defn clock-component
+  []
+  (let [time (rf/subscribe [:current-time])]
+    (fn []
+      [:div "Current Time" (readable-time time)])))
 
-;; Some global notifications
-(defonce time-updater (js/setInterval #(reset! timer (js/Date.)) 1000))
-
-(defonce notifiers
-  (add-watch timer :notify
-    (fn [key ref old new]
-      (let [{:keys [start-time interval break]}  @timer-state]
-        (when start-time
-          (let [full-period (+ interval break)
-                old-elapsed (elapsed start-time old full-period)
-                new-elapsed (elapsed start-time new full-period)]
-            (when (< old-elapsed interval new-elapsed)
-              (speak speak-take-break)
-              (js/console.log "Break Started"))))))))
-
-(defn init []
+;; -- Entry Point --------------------------------------------------------------
+(defn init
+  []
+  (rf/dispatch-sync [:initialize])
   (reagent/render [simple-example]
     (js/document.getElementById "container")))
+
+;; NOTE: see reagent/db for the actual database state ;)
+(comment
+  (require '[re-frame.db :as rdb])
+  @rdb/app-db)

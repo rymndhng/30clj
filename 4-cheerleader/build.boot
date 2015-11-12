@@ -12,7 +12,8 @@
                  [org.clojure/tools.nrepl "0.2.12" :scope "test"]
 
                  [org.clojure/clojurescript "1.7.170"]
-                 [reagent "0.5.1"]])
+                 [reagent "0.5.1"]
+                 [re-frame "0.5.0"]])
 
 (require
  '[adzerk.boot-cljs      :refer [cljs]]
