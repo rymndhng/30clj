@@ -1,0 +1,11 @@
+* Batch Writer
+An API for pluggable message batching.
+
+Consumer only has to define an instance of the protocol BatchEventPublisher.
+
+A batch will be published when:
+
+1. the cost of the batch exceeds the water mark
+2. the background poller times out, in which case all messages are flushed
+
+See example in =core.clj=

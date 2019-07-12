@@ -10,3 +10,7 @@ Small webapp that scheduled ephemeral messages. The messages are short lived and
 can only be read once.
 
 Check it out [[http://www.rymndhng.com/ephemerals/][here]]
+** 4 - Cheerleader
+Small webapp that tracks time. Could be a source of inspiration for a routine
+** 5- Batch Writer
+A small API for message batching
